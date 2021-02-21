@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class InGame extends StatefulWidget {
@@ -14,26 +15,27 @@ class RemaPlayersItem {
   RemaPlayersItem(this.id, this.playerone, this.playertwo);
 }
 
+class GameStatus {
+  final int timetostart;
+  final String message;
+  final int status;
+  GameStatus({this.timetostart, this.status, this.message});
+  GameStatus.fromJson(dynamic data)
+      : timetostart = json.decode(data)['timetostart'],
+        status = json.decode(data)['status'],
+        message = json.decode(data)['message'];
+}
+
 class _InGameState extends State<InGame> {
-  final List remaPlayers = [
-    RemaPlayersItem(1, "Thorakna", "A Player"),
-    RemaPlayersItem(1, "Thorakna", "A Player"),
-    RemaPlayersItem(1, "Thorakna", "A Player"),
-    RemaPlayersItem(1, "Thorakna", "A Player"),
-    RemaPlayersItem(1, "Thorakna", "A Player"),
-    RemaPlayersItem(1, "Thorakna", "A Player"),
-    RemaPlayersItem(1, "Thorakna", "A Player"),
-    RemaPlayersItem(1, "Thorakna", "A Player"),
-    RemaPlayersItem(1, "Thorakna", "A Player"),
-    RemaPlayersItem(1, "Thorakna", "A Player"),
-  ];
+  List<String> playersList = [];
 
   IO.Socket rpsio;
   int onlineusers = 0;
   bool areyouConnected = false;
   bool disposedDis = false;
 
-  bool gameStarted = false;
+  int gameStatus = 0;
+  String gameStMessage = "";
 
   _connectSocket() {
     rpsio = IO.io('http://192.168.0.100:80', <String, dynamic>{
@@ -43,6 +45,7 @@ class _InGameState extends State<InGame> {
     rpsio.connect();
     rpsio.onConnect(_onCon);
     rpsio.on('onlineusers', _onOu);
+    rpsio.on('game_status', _onGameStatus);
     rpsio.onDisconnect(_onDis);
   }
 
@@ -70,6 +73,17 @@ class _InGameState extends State<InGame> {
     if (mounted) {
       setState(() {
         onlineusers = data;
+      });
+    }
+  }
+
+  _onGameStatus(dynamic data) {
+    var status = GameStatus.fromJson(data);
+    if (mounted) {
+      setState(() {
+        gameStMessage = status.message;
+        gameStatus = status.status;
+        playersList = List<String>.from(json.decode(data)['players']);
       });
     }
   }
@@ -159,7 +173,7 @@ class _InGameState extends State<InGame> {
                           blurRadius: 10),
                     ]),
                 child: Column(
-                  children: gameStarted
+                  children: gameStatus == 2
                       ? [
                           Text(
                             "MATCHES (Real-time)",
@@ -168,7 +182,7 @@ class _InGameState extends State<InGame> {
                           ),
                           Expanded(
                               child: ListView.builder(
-                            itemCount: remaPlayers.length,
+                            itemCount: playersList.length,
                             itemBuilder: (context, index) {
                               return Container(
                                 margin: EdgeInsets.all(5),
@@ -184,16 +198,14 @@ class _InGameState extends State<InGame> {
                                           blurRadius: 5),
                                     ]),
                                 child: Row(children: [
-                                  Expanded(
-                                      child:
-                                          Text(remaPlayers[index].playerone)),
+                                  Expanded(child: Text(playersList[index])),
                                   Image.asset(
                                     "assets/images/rps.png",
                                     width: 64,
                                   ),
                                   Expanded(
                                       child: Text(
-                                    remaPlayers[index].playertwo,
+                                    playersList[index],
                                     textAlign: TextAlign.right,
                                   )),
                                 ]),
@@ -201,43 +213,53 @@ class _InGameState extends State<InGame> {
                             },
                           ))
                         ]
-                      : [
-                          Text(
-                            "New game will start NULL seconds later!",
-                            style: TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "CONNECTED PLAYERS",
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                          Expanded(
-                              child: GridView.builder(
-                            gridDelegate:
-                                SliverGridDelegateWithMaxCrossAxisExtent(
-                              maxCrossAxisExtent: 200,
-                              childAspectRatio: 6 / 2,
-                            ),
-                            itemCount: remaPlayers.length,
-                            itemBuilder: (context, index) {
-                              return Container(
-                                margin: EdgeInsets.all(5),
-                                padding: EdgeInsets.fromLTRB(15, 5, 15, 5),
-                                decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(10.0),
-                                    boxShadow: [
-                                      BoxShadow(
-                                          color: Colors.grey.withOpacity(0.5),
-                                          spreadRadius: 1,
-                                          blurRadius: 5),
-                                    ]),
-                                child: Text(remaPlayers[index].playerone),
-                              );
-                            },
-                          ))
-                        ],
+                      : gameStatus == 1
+                          ? [
+                              Text(
+                                gameStMessage,
+                                style: TextStyle(
+                                    fontSize: 14, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                "CONNECTED PLAYERS",
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                              Expanded(
+                                  child: GridView.builder(
+                                gridDelegate:
+                                    SliverGridDelegateWithMaxCrossAxisExtent(
+                                  maxCrossAxisExtent: 200,
+                                  childAspectRatio: 6 / 2,
+                                ),
+                                itemCount: playersList.length,
+                                itemBuilder: (context, index) {
+                                  return Container(
+                                    margin: EdgeInsets.all(5),
+                                    padding: EdgeInsets.fromLTRB(15, 5, 15, 5),
+                                    decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius:
+                                            BorderRadius.circular(10.0),
+                                        boxShadow: [
+                                          BoxShadow(
+                                              color:
+                                                  Colors.grey.withOpacity(0.5),
+                                              spreadRadius: 1,
+                                              blurRadius: 5),
+                                        ]),
+                                    child: Text(playersList[index]),
+                                  );
+                                },
+                              ))
+                            ]
+                          : [
+                              Text(
+                                "Connecting...",
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                            ],
                 )),
           ),
           Expanded(
