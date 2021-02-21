@@ -8,5 +8,9 @@
     "start": "node server.js"
   },
   "author": "Onur YASAR",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "http": "0.0.1-security",
+    "socket.io": "^2.0.1"
+  }
 }

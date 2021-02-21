@@ -40,42 +40,40 @@ class _MyHomePageState extends State<MyHomePage> {
         children: <Widget>[
           Hero(
             tag: "welcome",
-            child: SingleChildScrollView(
-              child: Container(
-                margin: EdgeInsets.fromLTRB(20, 0, 20, 20),
-                padding: EdgeInsets.all(15),
-                width: double.infinity,
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10.0),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.grey.withOpacity(0.5),
-                          spreadRadius: 1,
-                          blurRadius: 10),
-                    ]),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Rock Paper Scissors Online",
-                      style: TextStyle(fontSize: 22),
+            child: Container(
+              margin: EdgeInsets.fromLTRB(20, 0, 20, 20),
+              padding: EdgeInsets.all(15),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10.0),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.grey.withOpacity(0.5),
+                        spreadRadius: 1,
+                        blurRadius: 10),
+                  ]),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Rock Paper Scissors Online",
+                    style: TextStyle(fontSize: 22),
+                  ),
+                  Text.rich(
+                    TextSpan(
+                      text: 'by ', // default text style
+                      children: <TextSpan>[
+                        TextSpan(
+                            text: 'Onur YAŞAR',
+                            style: TextStyle(
+                                fontStyle: FontStyle.italic,
+                                color: Colors.blue,
+                                fontWeight: FontWeight.bold))
+                      ],
                     ),
-                    Text.rich(
-                      TextSpan(
-                        text: 'by ', // default text style
-                        children: <TextSpan>[
-                          TextSpan(
-                              text: 'Onur YAŞAR',
-                              style: TextStyle(
-                                  fontStyle: FontStyle.italic,
-                                  color: Colors.blue,
-                                  fontWeight: FontWeight.bold))
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
