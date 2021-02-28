@@ -166,14 +166,71 @@ io.sockets.on('connection', function (socket){
             opponent: playerone.playernick,
             opitem: dt
           }));
+          matches[i].playerone.item = dt;
           console.log(playerone.playernick+" picked "+dt);
+
+          if(playertwo.item != "yok"){
+            if(matches[i].playerone.item == matches[i].playertwo.item){
+              io.to(playerone.id).emit('matchst', "draw");
+              io.to(playertwo.id).emit('matchst', "draw");
+              matches[i].playerone.item = "yok";
+              matches[i].playertwo.item = "yok";
+            }else if(matches[i].playerone.item == "rock" && matches[i].playertwo.item == "scissors"){
+              io.to(playerone.id).emit('matchst', "win");
+              io.to(playertwo.id).emit('matchst', "lose");
+            }else if(matches[i].playerone.item == "scissors" && matches[i].playertwo.item == "rock"){
+              io.to(playerone.id).emit('matchst', "lose");
+              io.to(playertwo.id).emit('matchst', "win");
+            }else if(matches[i].playerone.item == "paper" && matches[i].playertwo.item == "scissors"){
+              io.to(playerone.id).emit('matchst', "lose");
+              io.to(playertwo.id).emit('matchst', "win");
+            }else if(matches[i].playerone.item == "scissors" && matches[i].playertwo.item == "paper"){
+              io.to(playerone.id).emit('matchst', "win");
+              io.to(playertwo.id).emit('matchst', "lose");
+            }else if(matches[i].playerone.item == "paper" && matches[i].playertwo.item == "rock"){
+              io.to(playerone.id).emit('matchst', "win");
+              io.to(playertwo.id).emit('matchst', "lose");
+            }else if(matches[i].playerone.item == "rock" && matches[i].playertwo.item == "paper"){
+              io.to(playerone.id).emit('matchst', "lose");
+              io.to(playertwo.id).emit('matchst', "win");
+            }
+          }
+
           break;
         }else if(playertwo.id == socket.id){
           io.to(playerone.id).emit('game', JSON.stringify({
             opponent: playertwo.playernick,
             opitem: dt
           }));
+          matches[i].playertwo.item = dt;
           console.log(playertwo.playernick+" picked "+dt);
+
+          if(playerone.item != "yok"){
+            if(matches[i].playerone.item == matches[i].playertwo.item){
+              io.to(playerone.id).emit('matchst', "draw");
+              io.to(playertwo.id).emit('matchst', "draw");
+              matches[i].playerone.item = "yok";
+              matches[i].playertwo.item = "yok";
+            }else if(matches[i].playerone.item == "rock" && matches[i].playertwo.item == "scissors"){
+              io.to(playerone.id).emit('matchst', "win");
+              io.to(playertwo.id).emit('matchst', "lose");
+            }else if(matches[i].playerone.item == "scissors" && matches[i].playertwo.item == "rock"){
+              io.to(playerone.id).emit('matchst', "lose");
+              io.to(playertwo.id).emit('matchst', "win");
+            }else if(matches[i].playerone.item == "paper" && matches[i].playertwo.item == "scissors"){
+              io.to(playerone.id).emit('matchst', "lose");
+              io.to(playertwo.id).emit('matchst', "win");
+            }else if(matches[i].playerone.item == "scissors" && matches[i].playertwo.item == "paper"){
+              io.to(playerone.id).emit('matchst', "win");
+              io.to(playertwo.id).emit('matchst', "lose");
+            }else if(matches[i].playerone.item == "paper" && matches[i].playertwo.item == "rock"){
+              io.to(playerone.id).emit('matchst', "win");
+              io.to(playertwo.id).emit('matchst', "lose");
+            }else if(matches[i].playerone.item == "rock" && matches[i].playertwo.item == "paper"){
+              io.to(playerone.id).emit('matchst', "lose");
+              io.to(playertwo.id).emit('matchst', "win");
+            }
+          }
           break;
         }
       }

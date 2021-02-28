@@ -89,6 +89,8 @@ class _InGameState extends State<InGame> {
   String opitem = "yok";
   String poneitem = "yok";
 
+  String matchStMessage = "";
+
   _connectSocket() {
     rpsio = IO.io('http://192.168.0.100:80', <String, dynamic>{
       'transports': ['websocket'],
@@ -99,6 +101,7 @@ class _InGameState extends State<InGame> {
     rpsio.on('onlineusers', _onOu);
     rpsio.on('game_status', _onGameStatus);
     rpsio.on('game', _onGame);
+    rpsio.on('matchst', _onMatchSt);
     rpsio.onDisconnect(_onDis);
   }
 
@@ -150,12 +153,37 @@ class _InGameState extends State<InGame> {
   }
 
   _onGame(dynamic data) {
-    setState(() {
-      opponentNick = json.decode(data)['opponent'];
-      opitem = json.decode(data)['opitem'];
-    });
+    if (mounted) {
+      setState(() {
+        opponentNick = json.decode(data)['opponent'];
+        opitem = json.decode(data)['opitem'];
+      });
+    }
     print("Opponent: " + opponentNick);
-    rpsio.emit("gamet", "scissors");
+  }
+
+  _onMatchSt(dynamic data) {
+    if (mounted) {
+      setState(() {
+        matchStMessage = data;
+      });
+      Future.delayed(const Duration(milliseconds: 3000), () {
+        setState(() {
+          poneitem = "yok";
+          opitem = "yok";
+          matchStMessage = "";
+        });
+      });
+    }
+  }
+
+  _pickItem(item) {
+    rpsio.emit("gamet", item);
+    if (mounted) {
+      setState(() {
+        poneitem = item;
+      });
+    }
   }
 
   @override
@@ -446,12 +474,12 @@ class _InGameState extends State<InGame> {
                       child: Transform(
                         alignment: Alignment.center,
                         transform: Matrix4.rotationY(math.pi),
-                        child: opitem == "yok"
+                        child: poneitem != "yok" && opitem != "yok"
                             ? Image.asset(
-                                "assets/images/rps_wait.gif",
+                                "assets/images/" + opitem + ".png",
                               )
                             : Image.asset(
-                                "assets/images/" + opitem + ".png",
+                                "assets/images/rps_wait.gif",
                               ),
                       ),
                     ),
@@ -459,13 +487,13 @@ class _InGameState extends State<InGame> {
                 gameStatus == 2
                     ? Container(
                         height: 80,
-                        child: true
+                        child: poneitem == "yok"
                             ? ButtonBar(
                                 mainAxisSize: MainAxisSize.max,
                                 alignment: MainAxisAlignment.center,
                                 children: <Widget>[
                                     ElevatedButton(
-                                      onPressed: () {},
+                                      onPressed: () => _pickItem("rock"),
                                       child: Text(
                                         'Rock',
                                         style: TextStyle(
@@ -473,7 +501,7 @@ class _InGameState extends State<InGame> {
                                       ),
                                     ),
                                     ElevatedButton(
-                                      onPressed: () {},
+                                      onPressed: () => _pickItem("paper"),
                                       child: Text(
                                         'Paper',
                                         style: TextStyle(
@@ -481,7 +509,7 @@ class _InGameState extends State<InGame> {
                                       ),
                                     ),
                                     ElevatedButton(
-                                      onPressed: () {},
+                                      onPressed: () => _pickItem("scissors"),
                                       child: Text(
                                         'Scissors',
                                         style: TextStyle(
@@ -489,7 +517,32 @@ class _InGameState extends State<InGame> {
                                       ),
                                     ),
                                   ])
-                            : Center(child: Text('yat olum')))
+                            : Center(
+                                child: matchStMessage == "draw"
+                                    ? Text(
+                                        'You tie!',
+                                        style: TextStyle(
+                                            color: Colors.orange,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 20),
+                                      )
+                                    : matchStMessage == "win"
+                                        ? Text(
+                                            'You win!',
+                                            style: TextStyle(
+                                                color: Colors.green,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 20),
+                                          )
+                                        : matchStMessage == "lose"
+                                            ? Text(
+                                                'You lose!',
+                                                style: TextStyle(
+                                                    color: Colors.red,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 20),
+                                              )
+                                            : Text('You picked ' + poneitem)))
                     : Container(
                         height: 80,
                         child: Center(
