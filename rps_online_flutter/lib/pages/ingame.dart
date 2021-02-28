@@ -1,6 +1,9 @@
+// Author: Onur YAŞAR
+
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'dart:math' as math;
 
 class InGame extends StatefulWidget {
   InGame({Key key, this.nickname}) : super(key: key);
@@ -9,10 +12,53 @@ class InGame extends StatefulWidget {
   _InGameState createState() => _InGameState();
 }
 
-class RemaPlayersItem {
+class Match {
+  int matchid;
+  PlayerMatched playerone;
+  PlayerMatched playertwo;
+
+  Match({this.matchid, this.playerone, this.playertwo});
+
+  Match.fromJson(Map<String, dynamic> json) {
+    matchid = json['matchid'];
+    playerone = json['playerone'] != null
+        ? new PlayerMatched.fromJson(json['playerone'])
+        : null;
+    playertwo = json['playertwo'] != null
+        ? new PlayerMatched.fromJson(json['playertwo'])
+        : null;
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['matchid'] = this.matchid;
+    if (this.playerone != null) {
+      data['playerone'] = this.playerone.toJson();
+    }
+    if (this.playertwo != null) {
+      data['playertwo'] = this.playertwo.toJson();
+    }
+    return data;
+  }
+}
+
+class PlayerMatched {
   int id;
-  String playerone, playertwo;
-  RemaPlayersItem(this.id, this.playerone, this.playertwo);
+  String playernick;
+
+  PlayerMatched({this.id, this.playernick});
+
+  PlayerMatched.fromJson(Map<String, dynamic> json) {
+    id = json['id'];
+    playernick = json['playernick'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['id'] = this.id;
+    data['playernick'] = this.playernick;
+    return data;
+  }
 }
 
 class GameStatus {
@@ -28,6 +74,8 @@ class GameStatus {
 
 class _InGameState extends State<InGame> {
   List<String> playersList = [];
+  List matchesList = [];
+  int matcheslistlength = 0;
 
   IO.Socket rpsio;
   int onlineusers = 0;
@@ -36,6 +84,10 @@ class _InGameState extends State<InGame> {
 
   int gameStatus = 0;
   String gameStMessage = "";
+
+  String opponentNick = "";
+  String opitem = "yok";
+  String poneitem = "yok";
 
   _connectSocket() {
     rpsio = IO.io('http://192.168.0.100:80', <String, dynamic>{
@@ -46,6 +98,7 @@ class _InGameState extends State<InGame> {
     rpsio.onConnect(_onCon);
     rpsio.on('onlineusers', _onOu);
     rpsio.on('game_status', _onGameStatus);
+    rpsio.on('game', _onGame);
     rpsio.onDisconnect(_onDis);
   }
 
@@ -80,12 +133,29 @@ class _InGameState extends State<InGame> {
   _onGameStatus(dynamic data) {
     var status = GameStatus.fromJson(data);
     if (mounted) {
-      setState(() {
-        gameStMessage = status.message;
-        gameStatus = status.status;
-        playersList = List<String>.from(json.decode(data)['players']);
-      });
+      if (status.status == 2) {
+        setState(() {
+          gameStatus = status.status;
+          matchesList = json.decode(data)['matches'];
+          matcheslistlength = json.decode(data)['matchlength'];
+        });
+      } else {
+        setState(() {
+          gameStMessage = status.message;
+          gameStatus = status.status;
+          playersList = List<String>.from(json.decode(data)['players']);
+        });
+      }
     }
+  }
+
+  _onGame(dynamic data) {
+    setState(() {
+      opponentNick = json.decode(data)['opponent'];
+      opitem = json.decode(data)['opitem'];
+    });
+    print("Opponent: " + opponentNick);
+    rpsio.emit("gamet", "scissors");
   }
 
   @override
@@ -134,7 +204,8 @@ class _InGameState extends State<InGame> {
                       text: 'You\'re ', // default text style
                       children: <TextSpan>[
                         TextSpan(
-                          text: areyouConnected ? 'connected.' : 'disconnected',
+                          text:
+                              areyouConnected ? 'connected.' : 'not connected',
                           style: TextStyle(
                               fontStyle: FontStyle.italic,
                               color:
@@ -149,7 +220,8 @@ class _InGameState extends State<InGame> {
                                 color: Colors.green,
                                 fontWeight: FontWeight.bold),
                           ),
-                        if (areyouConnected) TextSpan(text: ' online!'),
+                        if (areyouConnected)
+                          TextSpan(text: ' player(s) online!'),
                       ],
                     ),
                   ),
@@ -158,7 +230,6 @@ class _InGameState extends State<InGame> {
             ),
           ),
           Expanded(
-            flex: 3,
             child: Container(
                 margin: EdgeInsets.fromLTRB(20, 0, 20, 20),
                 padding: EdgeInsets.fromLTRB(15, 10, 15, 10),
@@ -182,7 +253,7 @@ class _InGameState extends State<InGame> {
                           ),
                           Expanded(
                               child: ListView.builder(
-                            itemCount: playersList.length,
+                            itemCount: matcheslistlength,
                             itemBuilder: (context, index) {
                               return Container(
                                 margin: EdgeInsets.all(5),
@@ -198,14 +269,17 @@ class _InGameState extends State<InGame> {
                                           blurRadius: 5),
                                     ]),
                                 child: Row(children: [
-                                  Expanded(child: Text(playersList[index])),
+                                  Expanded(
+                                      child: Text(matchesList[index]
+                                          ["playerone"]["playernick"])),
                                   Image.asset(
                                     "assets/images/rps.png",
                                     width: 64,
                                   ),
                                   Expanded(
                                       child: Text(
-                                    playersList[index],
+                                    matchesList[index]["playertwo"]
+                                        ["playernick"],
                                     textAlign: TextAlign.right,
                                   )),
                                 ]),
@@ -248,7 +322,10 @@ class _InGameState extends State<InGame> {
                                               spreadRadius: 1,
                                               blurRadius: 5),
                                         ]),
-                                    child: Text(playersList[index]),
+                                    child: Text(
+                                      playersList[index],
+                                      textAlign: TextAlign.center,
+                                    ),
                                   );
                                 },
                               ))
@@ -262,116 +339,166 @@ class _InGameState extends State<InGame> {
                             ],
                 )),
           ),
-          Expanded(
-            flex: 5,
-            child: Container(
-                margin: EdgeInsets.fromLTRB(20, 0, 20, 20),
-                padding: EdgeInsets.fromLTRB(15, 10, 15, 10),
-                width: double.infinity,
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10.0),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.grey.withOpacity(0.5),
-                          spreadRadius: 1,
-                          blurRadius: 10),
-                    ]),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Text(
-                        "GAME",
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
+          Container(
+            margin: EdgeInsets.fromLTRB(20, 0, 20, 20),
+            padding: EdgeInsets.fromLTRB(15, 10, 15, 10),
+            width: double.infinity,
+            decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10.0),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.grey.withOpacity(0.5),
+                      spreadRadius: 1,
+                      blurRadius: 10),
+                ]),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Text(
+                    "GAME",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                if (gameStatus == 2)
+                  IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Container(
+                            margin: EdgeInsets.fromLTRB(10, 10, 10, 0),
+                            padding: EdgeInsets.all(10),
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10.0),
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: Colors.grey.withOpacity(0.5),
+                                      spreadRadius: 1,
+                                      blurRadius: 5),
+                                ]),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Player 1: ",
+                                  style: TextStyle(fontSize: 15),
+                                ),
+                                Text(
+                                  "YOU",
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Container(
+                            margin: EdgeInsets.fromLTRB(10, 10, 10, 0),
+                            padding: EdgeInsets.all(10),
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10.0),
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: Colors.grey.withOpacity(0.5),
+                                      spreadRadius: 1,
+                                      blurRadius: 5),
+                                ]),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Player 2: ",
+                                  style: TextStyle(fontSize: 15),
+                                ),
+                                Text(
+                                  opponentNick,
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                if (gameStatus == 2)
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(
+                      child: poneitem == "yok"
+                          ? Image.asset(
+                              "assets/images/rps_wait.gif",
+                            )
+                          : Image.asset(
+                              "assets/images/" + poneitem + ".png",
+                            ),
+                    ),
+                    Expanded(
+                      child: Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.rotationY(math.pi),
+                        child: opitem == "yok"
+                            ? Image.asset(
+                                "assets/images/rps_wait.gif",
+                              )
+                            : Image.asset(
+                                "assets/images/" + opitem + ".png",
+                              ),
                       ),
                     ),
-                    IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Container(
-                              margin: EdgeInsets.all(10),
-                              padding: EdgeInsets.all(10),
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(10.0),
-                                  boxShadow: [
-                                    BoxShadow(
-                                        color: Colors.grey.withOpacity(0.5),
-                                        spreadRadius: 1,
-                                        blurRadius: 5),
-                                  ]),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Player 1: ",
-                                    style: TextStyle(fontSize: 15),
-                                  ),
-                                  Text(
-                                    "THORAKNA",
-                                    style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Container(
-                              margin: EdgeInsets.all(10),
-                              padding: EdgeInsets.all(10),
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(10.0),
-                                  boxShadow: [
-                                    BoxShadow(
-                                        color: Colors.grey.withOpacity(0.5),
-                                        spreadRadius: 1,
-                                        blurRadius: 5),
-                                  ]),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Player 2: ",
-                                    style: TextStyle(fontSize: 15),
-                                  ),
-                                  Text(
-                                    "YOU",
-                                    style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                    Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Image.asset(
-                              "assets/images/scissors.png",
-                            ),
-                          ),
-                          Expanded(
-                            child: Image.asset(
-                              "assets/images/paper.png",
-                            ),
-                          ),
-                        ]),
-                  ],
-                )),
+                  ]),
+                gameStatus == 2
+                    ? Container(
+                        height: 80,
+                        child: true
+                            ? ButtonBar(
+                                mainAxisSize: MainAxisSize.max,
+                                alignment: MainAxisAlignment.center,
+                                children: <Widget>[
+                                    ElevatedButton(
+                                      onPressed: () {},
+                                      child: Text(
+                                        'Rock',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () {},
+                                      child: Text(
+                                        'Paper',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () {},
+                                      child: Text(
+                                        'Scissors',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ])
+                            : Center(child: Text('yat olum')))
+                    : Container(
+                        height: 80,
+                        child: Center(
+                            child: Text(
+                          'The game has not started yet!',
+                          style: TextStyle(fontSize: 18),
+                        ))),
+              ],
+            ),
           ),
         ],
       ),
