@@ -12,6 +12,7 @@ Array.prototype.remove = function() {
 };
 
 var http = require('http');
+const { start } = require('repl');
 var app = http.createServer((req, res)=>{
     res.writeHead(200, {'Content-Type': 'text/html'});
     res.end("Working...");
@@ -25,7 +26,8 @@ var matches = [];
 var notmatched = [];
 var unluckyaga = {};
 
-var timetostart = 10;
+const ttstart = 10;
+var timetostart = ttstart;
 
 var gameStInterval;
 
@@ -38,13 +40,57 @@ function spliceUnmatched(z){
       return i.id === z;
   }), 1);
 }
-function matchPlayers(){
-  for (var i = 0; i < players.length; i++) {
-      if(players[i].eliminated == false){
-          notmatched.push(players[i]);
-      }
-  }
 
+function setgameinterval(y){
+  if(gameStInterval && !y){
+    clearInterval(gameStInterval);
+    timetostart = ttstart;
+  }
+  if(y){
+    matches = [];
+    notmatched = [];
+    unluckyaga = {};
+
+    gameStInterval = setInterval(function (){
+      io.sockets.emit('game_status', JSON.stringify({
+        timetostart,
+        status:1,
+        message: "New game will start "+timetostart+" seconds later!",
+        players: usersonlyname
+      }));
+      timetostart--;
+      if(timetostart < 1){
+        startGame();
+        clearInterval(gameStInterval);
+        timetostart = ttstart + 1;
+      }
+    }, 1000);
+  }else{
+    io.sockets.emit('game_status', JSON.stringify({
+      timetostart: 0,
+      status:1,
+      message: "Waiting for more players!",
+      players: usersonlyname
+    }));
+  }
+}
+
+function gameWinner(winner){
+  io.sockets.emit('game_status', JSON.stringify({
+    status:3,
+    message: winner.nick,
+    matchlength: matches.length,
+    matches
+  }));
+  players.forEach((e,i) => {
+    players[i].eliminated = false;
+  });
+  setTimeout(()=>{
+    setgameinterval(true);
+  }, 5000);
+}
+
+function matchPlayers(){
   var matchid = 0;
   while(notmatched.length > 0){
       var playerone = randGet();
@@ -73,67 +119,52 @@ function matchPlayers(){
 }
 
 function startGame(){
-  matchPlayers();
-  io.sockets.emit('game_status', JSON.stringify({
-    status:2,
-    message: "",
-    matchlength: matches.length,
-    matches
-  }));
-
-  for(var i=0; i<matches.length; i++){
-    var playerone = matches[i].playerone;
-    var playertwo = matches[i].playertwo;
-
-    console.log("Game started between "+playerone.playernick+" and "+playertwo.playernick);
-
-    io.to(playerone.id).emit('game', JSON.stringify({
-      opponent: playertwo.playernick,
-      opitem: 'yok'
+  notmatched = [];
+  var ctNotEliminated = 0;
+  for (var i = 0; i < players.length; i++) {
+      if(players[i].eliminated == false){
+          notmatched.push(players[i]);
+          ctNotEliminated++;
+      }
+  }
+  if(ctNotEliminated == 1){
+    gameWinner(notmatched[0]);
+  }else{
+    matchPlayers();
+    io.sockets.emit('game_status', JSON.stringify({
+      status:2,
+      message: "",
+      matchlength: matches.length,
+      matches
     }));
-
-    io.to(playertwo.id).emit('game', JSON.stringify({
-      opponent: playerone.playernick,
-      opitem: 'yok'
-    }));
+  
+    for(var i=0; i<matches.length; i++){
+      var playerone = matches[i].playerone;
+      var playertwo = matches[i].playertwo;
+  
+      console.log("Game started between "+playerone.playernick+" and "+playertwo.playernick);
+  
+      io.to(playerone.id).emit('game', JSON.stringify({
+        opponent: playertwo.playernick,
+        opitem: 'yok'
+      }));
+  
+      io.to(playertwo.id).emit('game', JSON.stringify({
+        opponent: playerone.playernick,
+        opitem: 'yok'
+      }));
+    }
   }
 }
 
+function eliminatePlayer(playerid){
+  players[players.findIndex(function(i){
+    return i.id === playerid;
+  })].eliminated = true;
+  startGame();
+}
+
 io.sockets.on('connection', function (socket){
-    function setgameinterval(y){
-      if(gameStInterval && !y){
-        clearInterval(gameStInterval);
-        timetostart = 10;
-      }
-      if(y){
-        matches = [];
-        notmatched = [];
-        unluckyaga = {};
-
-        gameStInterval = setInterval(function (){
-          io.sockets.emit('game_status', JSON.stringify({
-            timetostart,
-            status:1,
-            message: "New game will start "+timetostart+" seconds later!",
-            players: usersonlyname
-          }));
-          timetostart--;
-          if(timetostart < 1){
-            startGame();
-            clearInterval(gameStInterval);
-            timetostart = 11;
-          }
-        }, 1000);
-      }else{
-        io.sockets.emit('game_status', JSON.stringify({
-          timetostart: 0,
-          status:1,
-          message: "Waiting for more players!",
-          players: usersonlyname
-        }));
-      }
-    }
-
     function login(user){
       socket.username = user;
       usersonlyname.push(socket.username);
@@ -178,21 +209,33 @@ io.sockets.on('connection', function (socket){
             }else if(matches[i].playerone.item == "rock" && matches[i].playertwo.item == "scissors"){
               io.to(playerone.id).emit('matchst', "win");
               io.to(playertwo.id).emit('matchst', "lose");
+              eliminatePlayer(playertwo.id);
+              matches.splice(i, 1);
             }else if(matches[i].playerone.item == "scissors" && matches[i].playertwo.item == "rock"){
               io.to(playerone.id).emit('matchst', "lose");
               io.to(playertwo.id).emit('matchst', "win");
+              eliminatePlayer(playerone.id);
+              matches.splice(i, 1);
             }else if(matches[i].playerone.item == "paper" && matches[i].playertwo.item == "scissors"){
               io.to(playerone.id).emit('matchst', "lose");
               io.to(playertwo.id).emit('matchst', "win");
+              eliminatePlayer(playerone.id);
+              matches.splice(i, 1);
             }else if(matches[i].playerone.item == "scissors" && matches[i].playertwo.item == "paper"){
               io.to(playerone.id).emit('matchst', "win");
               io.to(playertwo.id).emit('matchst', "lose");
+              eliminatePlayer(playertwo.id);
+              matches.splice(i, 1);
             }else if(matches[i].playerone.item == "paper" && matches[i].playertwo.item == "rock"){
               io.to(playerone.id).emit('matchst', "win");
               io.to(playertwo.id).emit('matchst', "lose");
+              eliminatePlayer(playertwo.id);
+              matches.splice(i, 1);
             }else if(matches[i].playerone.item == "rock" && matches[i].playertwo.item == "paper"){
               io.to(playerone.id).emit('matchst', "lose");
               io.to(playertwo.id).emit('matchst', "win");
+              eliminatePlayer(playertwo.id);
+              matches.splice(i, 1);
             }
           }
 
@@ -214,21 +257,33 @@ io.sockets.on('connection', function (socket){
             }else if(matches[i].playerone.item == "rock" && matches[i].playertwo.item == "scissors"){
               io.to(playerone.id).emit('matchst', "win");
               io.to(playertwo.id).emit('matchst', "lose");
+              eliminatePlayer(playertwo.id);
+              matches.splice(i, 1);
             }else if(matches[i].playerone.item == "scissors" && matches[i].playertwo.item == "rock"){
               io.to(playerone.id).emit('matchst', "lose");
               io.to(playertwo.id).emit('matchst', "win");
+              eliminatePlayer(playerone.id);
+              matches.splice(i, 1);
             }else if(matches[i].playerone.item == "paper" && matches[i].playertwo.item == "scissors"){
               io.to(playerone.id).emit('matchst', "lose");
               io.to(playertwo.id).emit('matchst', "win");
+              eliminatePlayer(playerone.id);
+              matches.splice(i, 1);
             }else if(matches[i].playerone.item == "scissors" && matches[i].playertwo.item == "paper"){
               io.to(playerone.id).emit('matchst', "win");
               io.to(playertwo.id).emit('matchst', "lose");
+              eliminatePlayer(playertwo.id);
+              matches.splice(i, 1);
             }else if(matches[i].playerone.item == "paper" && matches[i].playertwo.item == "rock"){
               io.to(playerone.id).emit('matchst', "win");
               io.to(playertwo.id).emit('matchst', "lose");
+              eliminatePlayer(playertwo.id);
+              matches.splice(i, 1);
             }else if(matches[i].playerone.item == "rock" && matches[i].playertwo.item == "paper"){
               io.to(playerone.id).emit('matchst', "lose");
               io.to(playertwo.id).emit('matchst', "win");
+              eliminatePlayer(playertwo.id);
+              matches.splice(i, 1);
             }
           }
           break;

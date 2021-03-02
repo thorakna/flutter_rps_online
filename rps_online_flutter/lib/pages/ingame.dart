@@ -89,6 +89,7 @@ class _InGameState extends State<InGame> {
   String opitem = "yok";
   String poneitem = "yok";
 
+  String gameWinner = "";
   String matchStMessage = "";
 
   _connectSocket() {
@@ -141,7 +142,13 @@ class _InGameState extends State<InGame> {
           gameStatus = status.status;
           matchesList = json.decode(data)['matches'];
           matcheslistlength = json.decode(data)['matchlength'];
+          poneitem = "yok";
+          opitem = "yok";
+          matchStMessage = "";
         });
+      } else if (status.status == 3) {
+        gameStatus = status.status;
+        gameWinner = status.message;
       } else {
         setState(() {
           gameStMessage = status.message;
@@ -272,73 +279,41 @@ class _InGameState extends State<InGame> {
                           blurRadius: 10),
                     ]),
                 child: Column(
-                  children: gameStatus == 2
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: gameStatus == 3
                       ? [
+                          Image.asset(
+                            "assets/images/rps.png",
+                            width: MediaQuery.of(context).size.width / 2,
+                          ),
                           Text(
-                            "MATCHES (Real-time)",
+                            "WINNER",
                             style: TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.bold),
                           ),
-                          Expanded(
-                              child: ListView.builder(
-                            itemCount: matcheslistlength,
-                            itemBuilder: (context, index) {
-                              return Container(
-                                margin: EdgeInsets.all(5),
-                                padding: EdgeInsets.fromLTRB(15, 5, 15, 5),
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(10.0),
-                                    boxShadow: [
-                                      BoxShadow(
-                                          color: Colors.grey.withOpacity(0.5),
-                                          spreadRadius: 1,
-                                          blurRadius: 5),
-                                    ]),
-                                child: Row(children: [
-                                  Expanded(
-                                      child: Text(matchesList[index]
-                                          ["playerone"]["playernick"])),
-                                  Image.asset(
-                                    "assets/images/rps.png",
-                                    width: 64,
-                                  ),
-                                  Expanded(
-                                      child: Text(
-                                    matchesList[index]["playertwo"]
-                                        ["playernick"],
-                                    textAlign: TextAlign.right,
-                                  )),
-                                ]),
-                              );
-                            },
-                          ))
+                          Text(
+                            gameWinner,
+                            style: TextStyle(
+                                color: Colors.green,
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold),
+                          )
                         ]
-                      : gameStatus == 1
+                      : gameStatus == 2
                           ? [
                               Text(
-                                gameStMessage,
-                                style: TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                "CONNECTED PLAYERS",
+                                "MATCHES (Real-time)",
                                 style: TextStyle(
                                     fontSize: 16, fontWeight: FontWeight.bold),
                               ),
                               Expanded(
-                                  child: GridView.builder(
-                                gridDelegate:
-                                    SliverGridDelegateWithMaxCrossAxisExtent(
-                                  maxCrossAxisExtent: 200,
-                                  childAspectRatio: 6 / 2,
-                                ),
-                                itemCount: playersList.length,
+                                  child: ListView.builder(
+                                itemCount: matcheslistlength,
                                 itemBuilder: (context, index) {
                                   return Container(
                                     margin: EdgeInsets.all(5),
                                     padding: EdgeInsets.fromLTRB(15, 5, 15, 5),
+                                    width: double.infinity,
                                     decoration: BoxDecoration(
                                         color: Colors.white,
                                         borderRadius:
@@ -350,209 +325,272 @@ class _InGameState extends State<InGame> {
                                               spreadRadius: 1,
                                               blurRadius: 5),
                                         ]),
-                                    child: Text(
-                                      playersList[index],
-                                      textAlign: TextAlign.center,
-                                    ),
+                                    child: Row(children: [
+                                      Expanded(
+                                          child: Text(matchesList[index]
+                                              ["playerone"]["playernick"])),
+                                      Image.asset(
+                                        "assets/images/rps.png",
+                                        width: 64,
+                                      ),
+                                      Expanded(
+                                          child: Text(
+                                        matchesList[index]["playertwo"]
+                                            ["playernick"],
+                                        textAlign: TextAlign.right,
+                                      )),
+                                    ]),
                                   );
                                 },
                               ))
                             ]
-                          : [
-                              Text(
-                                "Connecting...",
-                                style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                            ],
+                          : gameStatus == 1
+                              ? [
+                                  Text(
+                                    gameStMessage,
+                                    style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    "CONNECTED PLAYERS",
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                  Expanded(
+                                      child: GridView.builder(
+                                    gridDelegate:
+                                        SliverGridDelegateWithMaxCrossAxisExtent(
+                                      maxCrossAxisExtent: 200,
+                                      childAspectRatio: 6 / 2,
+                                    ),
+                                    itemCount: playersList.length,
+                                    itemBuilder: (context, index) {
+                                      return Container(
+                                        margin: EdgeInsets.all(5),
+                                        padding:
+                                            EdgeInsets.fromLTRB(15, 5, 15, 5),
+                                        decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius:
+                                                BorderRadius.circular(10.0),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                  color: Colors.grey
+                                                      .withOpacity(0.5),
+                                                  spreadRadius: 1,
+                                                  blurRadius: 5),
+                                            ]),
+                                        child: Text(
+                                          playersList[index],
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      );
+                                    },
+                                  ))
+                                ]
+                              : [
+                                  Text(
+                                    "Connecting...",
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ],
                 )),
           ),
-          Container(
-            margin: EdgeInsets.fromLTRB(20, 0, 20, 20),
-            padding: EdgeInsets.fromLTRB(15, 10, 15, 10),
-            width: double.infinity,
-            decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10.0),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.grey.withOpacity(0.5),
-                      spreadRadius: 1,
-                      blurRadius: 10),
-                ]),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Text(
-                    "GAME",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                if (gameStatus == 2)
-                  IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Container(
-                            margin: EdgeInsets.fromLTRB(10, 10, 10, 0),
-                            padding: EdgeInsets.all(10),
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10.0),
-                                boxShadow: [
-                                  BoxShadow(
-                                      color: Colors.grey.withOpacity(0.5),
-                                      spreadRadius: 1,
-                                      blurRadius: 5),
-                                ]),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Player 1: ",
-                                  style: TextStyle(fontSize: 15),
-                                ),
-                                Text(
-                                  "YOU",
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Container(
-                            margin: EdgeInsets.fromLTRB(10, 10, 10, 0),
-                            padding: EdgeInsets.all(10),
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10.0),
-                                boxShadow: [
-                                  BoxShadow(
-                                      color: Colors.grey.withOpacity(0.5),
-                                      spreadRadius: 1,
-                                      blurRadius: 5),
-                                ]),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Player 2: ",
-                                  style: TextStyle(fontSize: 15),
-                                ),
-                                Text(
-                                  opponentNick,
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      ],
+          if (gameStatus != 3)
+            Container(
+              margin: EdgeInsets.fromLTRB(20, 0, 20, 20),
+              padding: EdgeInsets.fromLTRB(15, 10, 15, 10),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10.0),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.grey.withOpacity(0.5),
+                        spreadRadius: 1,
+                        blurRadius: 10),
+                  ]),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Text(
+                      "GAME",
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
-                if (gameStatus == 2)
-                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Expanded(
-                      child: poneitem == "yok"
-                          ? Image.asset(
-                              "assets/images/rps_wait.gif",
-                            )
-                          : Image.asset(
-                              "assets/images/" + poneitem + ".png",
-                            ),
-                    ),
-                    Expanded(
-                      child: Transform(
-                        alignment: Alignment.center,
-                        transform: Matrix4.rotationY(math.pi),
-                        child: poneitem != "yok" && opitem != "yok"
-                            ? Image.asset(
-                                "assets/images/" + opitem + ".png",
-                              )
-                            : Image.asset(
-                                "assets/images/rps_wait.gif",
+                  if (gameStatus == 2)
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Container(
+                              margin: EdgeInsets.fromLTRB(10, 10, 10, 0),
+                              padding: EdgeInsets.all(10),
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10.0),
+                                  boxShadow: [
+                                    BoxShadow(
+                                        color: Colors.grey.withOpacity(0.5),
+                                        spreadRadius: 1,
+                                        blurRadius: 5),
+                                  ]),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Player 1: ",
+                                    style: TextStyle(fontSize: 15),
+                                  ),
+                                  Text(
+                                    "YOU",
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ],
                               ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Container(
+                              margin: EdgeInsets.fromLTRB(10, 10, 10, 0),
+                              padding: EdgeInsets.all(10),
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10.0),
+                                  boxShadow: [
+                                    BoxShadow(
+                                        color: Colors.grey.withOpacity(0.5),
+                                        spreadRadius: 1,
+                                        blurRadius: 5),
+                                  ]),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Player 2: ",
+                                    style: TextStyle(fontSize: 15),
+                                  ),
+                                  Text(
+                                    opponentNick,
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        ],
                       ),
                     ),
-                  ]),
-                gameStatus == 2
-                    ? Container(
-                        height: 80,
-                        child: poneitem == "yok"
-                            ? ButtonBar(
-                                mainAxisSize: MainAxisSize.max,
-                                alignment: MainAxisAlignment.center,
-                                children: <Widget>[
-                                    ElevatedButton(
-                                      onPressed: () => _pickItem("rock"),
-                                      child: Text(
-                                        'Rock',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold),
-                                      ),
+                  if (gameStatus == 2)
+                    Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: poneitem == "yok"
+                                ? Image.asset(
+                                    "assets/images/rps_wait.gif",
+                                  )
+                                : Image.asset(
+                                    "assets/images/" + poneitem + ".png",
+                                  ),
+                          ),
+                          Expanded(
+                            child: Transform(
+                              alignment: Alignment.center,
+                              transform: Matrix4.rotationY(math.pi),
+                              child: poneitem != "yok" && opitem != "yok"
+                                  ? Image.asset(
+                                      "assets/images/" + opitem + ".png",
+                                    )
+                                  : Image.asset(
+                                      "assets/images/rps_wait.gif",
                                     ),
-                                    ElevatedButton(
-                                      onPressed: () => _pickItem("paper"),
-                                      child: Text(
-                                        'Paper',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ]),
+                  gameStatus == 2
+                      ? Container(
+                          height: 80,
+                          child: poneitem == "yok"
+                              ? ButtonBar(
+                                  mainAxisSize: MainAxisSize.max,
+                                  alignment: MainAxisAlignment.center,
+                                  children: <Widget>[
+                                      ElevatedButton(
+                                        onPressed: () => _pickItem("rock"),
+                                        child: Text(
+                                          'Rock',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
                                       ),
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: () => _pickItem("scissors"),
-                                      child: Text(
-                                        'Scissors',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold),
+                                      ElevatedButton(
+                                        onPressed: () => _pickItem("paper"),
+                                        child: Text(
+                                          'Paper',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
                                       ),
-                                    ),
-                                  ])
-                            : Center(
-                                child: matchStMessage == "draw"
-                                    ? Text(
-                                        'You tie!',
-                                        style: TextStyle(
-                                            color: Colors.orange,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 20),
-                                      )
-                                    : matchStMessage == "win"
-                                        ? Text(
-                                            'You win!',
-                                            style: TextStyle(
-                                                color: Colors.green,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 20),
-                                          )
-                                        : matchStMessage == "lose"
-                                            ? Text(
-                                                'You lose!',
-                                                style: TextStyle(
-                                                    color: Colors.red,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 20),
-                                              )
-                                            : Text('You picked ' + poneitem)))
-                    : Container(
-                        height: 80,
-                        child: Center(
-                            child: Text(
-                          'The game has not started yet!',
-                          style: TextStyle(fontSize: 18),
-                        ))),
-              ],
+                                      ElevatedButton(
+                                        onPressed: () => _pickItem("scissors"),
+                                        child: Text(
+                                          'Scissors',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ])
+                              : Center(
+                                  child: matchStMessage == "draw"
+                                      ? Text(
+                                          'You tie!',
+                                          style: TextStyle(
+                                              color: Colors.orange,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 20),
+                                        )
+                                      : matchStMessage == "win"
+                                          ? Text(
+                                              'You win!',
+                                              style: TextStyle(
+                                                  color: Colors.green,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 20),
+                                            )
+                                          : matchStMessage == "lose"
+                                              ? Text(
+                                                  'You lose!',
+                                                  style: TextStyle(
+                                                      color: Colors.red,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 20),
+                                                )
+                                              : Text('You picked ' + poneitem)))
+                      : Container(
+                          height: 80,
+                          child: Center(
+                              child: Text(
+                            'The game has not started yet!',
+                            style: TextStyle(fontSize: 18),
+                          ))),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     ));
